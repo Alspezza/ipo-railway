@@ -3,11 +3,41 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 
 def valid_on_sklad(kolvo, x):
     if (kolvo > x):
         raise ValueError
 
+class Profile(models.Model):
+    ROLE_CHOICES = [
+        ('CUSTOMER', 'Покупатель'),
+        ('ADMIN', 'Администратор'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=15, choices=ROLE_CHOICES, default='CUSTOMER')
+    full_name = models.CharField(max_length=255, blank=True, verbose_name="ФИО")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    address = models.TextField(blank=True, verbose_name="Адрес")
+    
+    #2 специфичных поля
+    delivery_city = models.CharField(max_length=100, blank=True, verbose_name="Город доставки")
+    favorite_category = models.CharField(max_length=100, blank=True, verbose_name="Любимая категория")
+
+    def __str__(self):
+        return f"Профиль: {self.user.username} ({self.get_role_display()})"
+    
+
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=50, default='Обрабатывается')
+
+    def __str__(self):
+        return f"Заказ №{self.id} — {self.user.username}"
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -83,3 +113,11 @@ class BucketElem(models.Model):
         else:
             return (self.product.price * self.amount)
     
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()

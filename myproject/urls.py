@@ -21,6 +21,8 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from shop import views
+from shop.views import register_view, login_view, logout_view, RegisterView, LoginView, LogoutView, MeView, OrderListView, GetCSRFToken, settings_page, ChangePasswordView, UpdateAccountSettingsView
+
 
 urlpatterns = [
     path('', views.home, name='home'),  
@@ -32,8 +34,22 @@ urlpatterns = [
     path('api/cart/update/', views.update_cart, name='update_cart'),
     path('product/<int:pk>/', views.product_detail, name='product_detail'),
     path('api-auth/', include('rest_framework.urls')),
-    path('accounts/login/', auth_views.LoginView.as_view(template_name='admin/login.html'), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('register/', register_view, name='register'),
+    path('login/', login_view, name='login'),
+    path('logout/', logout_view, name='logout'),
+    path('settings/', settings_page, name='settings'),
+    path('account/', views.account_page, name='account'),
+    #path('accounts/login/', auth_views.LoginView.as_view(template_name='admin/login.html'), name='login'),
+    #path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+
+    path('api/csrf/', GetCSRFToken.as_view(), name='api-csrf'),
+    path('api/register/', RegisterView.as_view(), name='api-register'),
+    path('api/login/', LoginView.as_view(), name='api-login'),
+    path('api/logout/', LogoutView.as_view(), name='api-logout'),
+    path('api/me/', MeView.as_view(), name='api-me'),
+    path('api/orders/', OrderListView.as_view(), name='api-orders'),
+    path('api/change-password/', ChangePasswordView.as_view(), name='api-change-password'),
+    path('api/update-account/', UpdateAccountSettingsView.as_view(), name='api-update-account'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

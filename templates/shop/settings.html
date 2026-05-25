@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки профиля</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding-top: 40px; padding-bottom: 40px; box-sizing: border-box;">
+
+    <div style="background: #ffffff; border: 1px solid #e3e6f0; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.05); max-width: 450px; width: 100%; padding: 30px; box-sizing: border-box;">
+        
+        <h2 style="text-align: center; margin-top: 0; margin-bottom: 25px; font-weight: 500; color: #333333; font-size: 26px;">Настройки аккаунта</h2>
+
+        <!-- Общий блок уведомлений -->
+        <div id="settings-alert" style="display: none; padding: 12px; margin-bottom: 20px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: 500;"></div>
+
+        <!-- ФОРМА 1: ИЗМЕНЕНИЕ ЛОГИНА И EMAIL -->
+        <div style="border-bottom: 1px solid #e3e6f0; padding-bottom: 25px; margin-bottom: 25px;">
+            <h4 style="margin-top: 0; margin-bottom: 15px; color: #4e73df; font-weight: 500;">Личные данные</h4>
+            <form id="account-info-form" style="display: flex; flex-direction: column;">
+                <div style="margin-bottom: 12px;">
+                    <label for="username_field" style="display: block; font-weight: 500; color: #444444; margin-bottom: 6px; font-size: 14px;">Логин (Username):</label>
+                    <input type="text" id="username_field" required style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box; outline: none;">
+                </div>
+                <div style="margin-bottom: 18px;">
+                    <label for="email_field" style="display: block; font-weight: 500; color: #444444; margin-bottom: 6px; font-size: 14px;">Email:</label>
+                    <input type="email" id="email_field" required style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box; outline: none;">
+                </div>
+                <button type="submit" style="width: 100%; background-color: #0066ff; color: #ffffff; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                    Сохранить изменения
+                </button>
+            </form>
+        </div>
+
+        <!-- ФОРМА 2: СМЕНА ПАРОЛЯ -->
+        <div>
+            <h4 style="margin-top: 0; margin-bottom: 15px; color: #dc3545; font-weight: 500;">Безопасность</h4>
+            <form id="password-form" style="display: flex; flex-direction: column;">
+                <div style="margin-bottom: 12px;">
+                    <label for="old-pass" style="display: block; font-weight: 500; color: #444444; margin-bottom: 6px; font-size: 14px;">Старый пароль:</label>
+                    <input type="password" id="old-pass" required style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box; outline: none;">
+                </div>
+                <div style="margin-bottom: 18px;">
+                    <label for="new-pass" style="display: block; font-weight: 500; color: #444444; margin-bottom: 6px; font-size: 14px;">Новый пароль:</label>
+                    <input type="password" id="new-pass" required style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; box-sizing: border-box; outline: none;">
+                </div>
+                <button type="submit" style="width: 100%; background-color: #333333; color: #ffffff; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                    Обновить пароль
+                </button>
+            </form>
+        </div>
+
+        <!-- Ссылка назад в ЛК -->
+        <div style="text-align: center; margin-top: 25px; font-size: 14px;">
+            <a href="/account/" style="color: #0066ff; text-decoration: none; font-weight: 500;">← Назад в личный кабинет</a>
+        </div>
+    </div>
+
+    <script>
+        // Функция чтения CSRF-токена
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function showMessage(text, isSuccess) {
+            const alertBox = document.getElementById('settings-alert');
+            alertBox.style.display = 'block';
+            if (isSuccess) {
+                alertBox.style.backgroundColor = '#d4edda';
+                alertBox.style.color = '#155724';
+                alertBox.style.border = '1px solid #c3e6cb';
+            } else {
+                alertBox.style.backgroundColor = '#f8d7da';
+                alertBox.style.color = '#721c24';
+                alertBox.style.border = '1px solid #f5c6cb';
+            }
+            alertBox.innerText = text;
+        }
+
+        // При загрузке страницы подтягиваем текущие Username и Email из API /api/me/
+        window.onload = function() {
+            fetch('/api/me/')
+            .then(res => {
+                if(res.status === 200) return res.json();
+                window.location.href = '/login/'; // Если сессия слетела, отправляем на вход
+            })
+            .then(data => {
+                if(data) {
+                    document.getElementById('username_field').value = data.username;
+                    document.getElementById('email_field').value = data.email || '';
+                }
+            });
+        };
+
+        // Обработка Формы 1 (Логин и Email)
+        document.getElementById('account-info-form').onsubmit = function(e) {
+            e.preventDefault();
+            fetch('/api/update-account/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    username: document.getElementById('username_field').value,
+                    email: document.getElementById('email_field').value
+                })
+            })
+            .then(res => res.json().then(data => ({status: res.status, body: data})))
+            .then(resObj => {
+                if(resObj.status === 200) {
+                    showMessage('Личные данные успешно обновлены!', true);
+                } else {
+                    showMessage(resObj.body.error || 'Произошла ошибка при обновлении', false);
+                }
+            });
+        };
+
+        // Обработка Формы 2 (Пароль)
+        document.getElementById('password-form').onsubmit = function(e) {
+            e.preventDefault();
+            fetch('/api/change-password/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    old_password: document.getElementById('old-pass').value,
+                    new_password: document.getElementById('new-pass').value
+                })
+            })
+            .then(res => {
+                if(res.status === 200) {
+                    showMessage('Пароль успешно изменен!', true);
+                    document.getElementById('password-form').reset();
+                } else {
+                    showMessage('Не удалось изменить пароль. Проверьте старый пароль.', false);
+                }
+            });
+        };
+    </script>
+</body>
+</html>

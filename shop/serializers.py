@@ -1,8 +1,28 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Category, Maker, Product, Bucket, BucketElem
+from .models import Category, Maker, Product, Bucket, BucketElem, Profile, Order
 from django.contrib.auth.models import User
 from rest_framework import serializers
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['role', 'full_name', 'phone', 'address', 'delivery_city', 'favorite_category']
+        read_only_fields = ['role'] # Менять роль через API пользователю запрещено
+
+class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'profile']
+
+class OrderSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = Order
+        fields = ['id', 'username', 'created_at', 'total_amount', 'status']
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)

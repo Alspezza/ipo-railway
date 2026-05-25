@@ -2,14 +2,17 @@ from .serializers import RegisterSerializer
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from django.shortcuts import render
-from rest_framework import viewsets, generics
-from .models import Category, Maker, Product, Bucket, BucketElem
+from rest_framework import viewsets, generics, views, status, permissions
+from .models import Category, Maker, Product, Bucket, BucketElem, Profile, Order
 from .serializers import (
     CategorySerializer, 
     MakerSerializer, 
     ProductSerializer, 
     BucketSerializer, 
-    BucketElemSerializer
+    BucketElemSerializer,
+    UserSerializer, 
+    ProfileSerializer, 
+    OrderSerializer
 )
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -19,8 +22,123 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.forms import AuthenticationForm
+from .forms import RegistrationForm
+from django.shortcuts import render, redirect
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 
+class UpdateAccountSettingsView(views.APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        user = request.user
+        new_username = request.data.get("username")
+        new_email = request.data.get("email")
+
+        if not new_username or not new_email:
+            return Response({"error": "Поля логин и email не могут быть пустыми"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверяем, не занят ли новый логин кем-то другим
+        if new_username != user.username and User.objects.filter(username=new_username).exists():
+            return Response({"error": "Этот логин уже занят другим пользователем"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.username = new_username
+        user.email = new_email
+        user.save()
+        
+        return Response({
+            "success": "Данные успешно обновлены",
+            "username": user.username,
+            "email": user.email
+        })
+
+#Функция, которая просто открывает файл settings.html в браузере
+def settings_page(request):
+    return render(request, 'shop/settings.html')
+
+class IsAdminRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and getattr(request.user.profile, 'role', '') == 'ADMIN'
+
+# Получение CSRF токена для фронтенда
+class GetCSRFToken(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, request):
+        return Response({'success': 'CSRF cookie set'})
+
+# Регистрация
+class RegisterView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        data = request.data
+        username = data.get('username')
+        password = data.get('password')
+        email = data.get('email')
+        role = data.get('role', 'CUSTOMER') # Можно передать ADMIN при создании первого админа
+
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Пользователь уже существует'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.create_user(username=username, password=password, email=email)
+        user.profile.role = role
+        user.profile.full_name = data.get('full_name', '')
+        user.profile.save()
+        
+        return Response({'success': 'Пользователь успешно зарегистрирован'}, status=status.HTTP_201_CREATED)
+
+#Вход 
+class LoginView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        data = request.data
+        username = data.get('username')
+        password = data.get('password')
+        user = authenticate(username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            return Response({'success': 'Успешный вход', 'user': UserSerializer(user).data})
+        return Response({'error': 'Неверные учетные данные'}, status=status.HTTP_401_UNAUTHORIZED)
+
+#Выход 
+class LogoutView(views.APIView):
+    def post(self, request):
+        logout(request)
+        return Response({'success': 'Успешный выход'})
+
+#Эндпоинт /api/me/ (GET и PATCH)
+class MeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        profile = request.user.profile
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(UserSerializer(request.user).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Эндпоинт /api/orders/ с фильтрацией по ролям
+class OrderListView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user.profile, 'role', '') == 'ADMIN':
+            return Order.objects.all() # Админ видит всё
+        return Order.objects.filter(user=user) # Покупатель — только свои
+    
 def cart(request):
     """Страница корзины"""
     # Получаем корзину из сессии
@@ -236,3 +354,65 @@ def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
     return render(request, 'shop/product_detail.html', {'product': product})
 
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('catalog')  
+        
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('catalog')
+    else:
+        form = RegistrationForm()
+    return render(request, 'shop/register.html', {'form': form})
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('catalog')
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('catalog')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'shop/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+
+class ChangePasswordView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+        
+        if not user.check_password(old_password):
+            return Response({"error": "Неверный старый пароль"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user.set_password(new_password)
+        user.save()
+        login(request, user)  
+        return Response({"success": "Пароль изменен"})
+
+
+def account_page(request):
+    return render(request, 'shop/account.html')
+
+
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:  # GET доступен всем
+            return True
+        return request.user and request.user.is_authenticated and getattr(request.user.profile, 'role', '') == 'ADMIN'

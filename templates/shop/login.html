@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-vh: 100vh; height: 100vh;">
+
+    <div style="background: #ffffff; border: 1px solid #e3e6f0; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.05); max-width: 400px; width: 100%; padding: 30px; box-sizing: border-box;">
+        
+        <h2 style="text-align: center; margin-top: 0; margin-bottom: 25px; font-weight: 500; color: #333333; font-size: 28px; letter-spacing: -0.5px;">Авторизация</h2>
+
+        <!-- Блок ошибок -->
+        {% if form.errors or error %}
+        <div style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 10px; border-radius: 5px; text-align: center; font-size: 14px; margin-bottom: 20px;">
+            Неверный логин или пароль.
+        </div>
+        {% endif %}
+
+        <form method="post" style="display: flex; flex-direction: column;">
+            {% csrf_token %}
+            
+            <!-- Логин -->
+            <div style="margin-bottom: 18px;">
+                <label for="username_input" style="display: block; font-weight: 500; color: #444444; margin-bottom: 6px; font-size: 14px;">Username:</label>
+                <input type="text" 
+                       name="username" 
+                       id="username_input" 
+                       placeholder="Введите ваш логин"
+                       required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 15px; box-sizing: border-box; background-color: #ffffff; outline: none;">
+            </div>
+
+            <!-- Пароль -->
+            <div style="margin-bottom: 25px;">
+                <label for="password_input" style="display: block; font-weight: 500; color: #444444; margin-bottom: 6px; font-size: 14px;">Password:</label>
+                <input type="password" 
+                       name="password" 
+                       id="password_input" 
+                       placeholder="Введите ваш пароль"
+                       required
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 15px; box-sizing: border-box; background-color: #ffffff; outline: none;">
+            </div>
+
+            <!-- Кнопка -->
+            <button type="submit" 
+                    style="width: 100%; background-color: #0066ff; color: #ffffff; border: none; padding: 12px; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;">
+                Войти
+            </button>
+
+            <!-- Ссылка -->
+            <div style="text-align: center; margin-top: 20px; font-size: 14px; color: #6c757d;">
+                Еще нет аккаунта? <a href="{% url 'register' %}" style="color: #0066ff; text-decoration: none; font-weight: 500;">Регистрация</a>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>
