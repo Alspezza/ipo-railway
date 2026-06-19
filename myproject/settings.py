@@ -33,17 +33,7 @@ ALLOWED_HOSTS = config(
     cast=Csv()
 )
 
-if not DEBUG:
-    ALLOWED_HOSTS.append('.up.railway.app')
 
-if 'corsheaders' in INSTALLED_APPS:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
-    RAILWAY_STATIC_URL = config('RAILWAY_STATIC_URL', default=None)
-    if RAILWAY_STATIC_URL:
-        CORS_ALLOWED_ORIGINS.append(f"https://{RAILWAY_STATIC_URL}")
 # Application definition
 
 INSTALLED_APPS = [
@@ -67,6 +57,19 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if not DEBUG:
+    ALLOWED_HOSTS.append('.up.railway.app')
+
+if 'corsheaders' in INSTALLED_APPS:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+    RAILWAY_STATIC_URL = config('RAILWAY_STATIC_URL', default=None)
+    if RAILWAY_STATIC_URL:
+        CORS_ALLOWED_ORIGINS.append(f"https://{RAILWAY_STATIC_URL}")
+    MIDDLEWARE.insert(2, 'corsheaders.middleware.CorsMiddleware')
 
 ROOT_URLCONF = 'myproject.urls'
 
