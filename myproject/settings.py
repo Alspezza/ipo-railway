@@ -58,8 +58,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-if not DEBUG:
-    ALLOWED_HOSTS.append('.up.railway.app')
+ALLOWED_HOSTS.append('.up.railway.app')
+ALLOWED_HOSTS.append('ipo-railway-production.up.railway.app')
 
 if 'corsheaders' in INSTALLED_APPS:
     CORS_ALLOWED_ORIGINS = [
