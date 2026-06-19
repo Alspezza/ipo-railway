@@ -147,6 +147,11 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
+    # Хранилище по умолчанию для медиа-файлов
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # Хранилище WhiteNoise для статики
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
